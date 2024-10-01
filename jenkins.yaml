@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jenkins-pv-ganesh
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /var/lib/jenkinsganesh
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-pvc-ganesh
+  namespace: ganesh
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: ganesh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      containers:
+        - name: jenkins
+          image: jenkins/jenkins:latest  # Latest Jenkins image from Docker Hub
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - mountPath: /var/jenkins_home  # Default Jenkins home directory
+              name: jenkins-storage
+          securityContext:
+            runAsUser: 0  # Run as root user for privilege
+            privileged: true  # Enable privileged mode
+      volumes:
+        - name: jenkins-storage
+          persistentVolumeClaim:
+            claimName: jenkins-pvc-ganesh  # Use the PVC defined earlier
